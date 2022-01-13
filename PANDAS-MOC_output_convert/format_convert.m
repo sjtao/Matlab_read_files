@@ -9,8 +9,14 @@ zlayer = 32;  %number of layers in z-axial
 tstep = 1;    %number of time steps printed in this file
 timestep = 0.25;
 
-showintermediate = 0; %plot results while reading, slow down the code
+showintermediate = 0; %plot results while reading
 showplot = 1;         %plot results after reading
+
+%% Axial Location
+AxialLocation = zeros(zlayer,1); % top and down water/reflector 4 layers each
+for i = 1:zlayer
+    AxialLocation(i) = (i-4) * 5.355;
+end
 
 %% OPEN TXT FILE
 fid = fopen('TDW2b.txt','r'); %change the txt file name if needed
@@ -65,6 +71,7 @@ if showplot
     figure(2)
     colormap jet
     surface(NormPinPower, 'EdgeColor','none')
+    title('NormPinPower');
     xlim([1, asmb*core+1]);
     ylim([1, asmb*core+1]);
     colorbar
@@ -95,15 +102,6 @@ for z = 1:zlayer
                 t = split(tline);
                 v = str2double(t(end-asmb+1:end));
                 NormPinPowerLayer(z, asmb*(i-1)+a, asmb*(j-1)+1 : asmb*j) = v';
-                if showintermediate
-                    figure(3)
-                    temp1(:,:) = NormPinPowerLayer(z,:,:);
-                    surface(temp1, 'EdgeColor','none'); 
-                    xlim([1, asmb*core+1]);
-                    ylim([1, asmb*core+1]);
-                    colorbar
-                    pause(0.001);
-                end
                 a = a + 1;
                 tline = fgetl(fid);
             end
@@ -122,18 +120,30 @@ for z = 1:zlayer
         AsmbPowerCoreLayer(z, i, :) = v';
         tline = fgetl(fid);
     end
-    if showintermediate
-        figure(4)
-        temp2(:,:) = AsmbPowerCoreLayer(z,:,:);
-        surface(temp2, 'EdgeColor','none'); 
-        colorbar
-        pause(1);
-    end
 end
 
 if showplot
+    figure(4)
+    colormap jet
+    diff = double(squeeze(NormPinPowerLayer));
+%     diff(diff==0)=nan;
+    h = slice(diff, 1:size(diff,2), 1:size(diff,1), 1:size(diff,3));
+    set(h, 'EdgeColor','none', 'FaceColor','interp')
+    title('NormPinPowerLayer')
+    colorbar
+    alpha(.15)
+    pause(1);
+    
     figure(5)
-    isosurface(AsmbPowerCoreLayer,'EdgeColor','none'); 
+    colormap jet
+%   isosurface(AsmbPowerCoreLayer,'EdgeColor','none'); 
+    diff = double(squeeze(AsmbPowerCoreLayer));
+%     diff(diff==0)=nan;
+    h = slice(diff, 1:size(diff,2), 1:size(diff,1), 1:size(diff,3));
+    set(h, 'EdgeColor','none', 'FaceColor','interp')
+    title('AsmbPowerCoreLayer')
+    alpha(.15)
+    colorbar
     pause(1);
 end
 
@@ -154,7 +164,8 @@ end
 if showplot
     figure(6)
     colormap jet
-    surface(NormAssmPowerCore, 'EdgeColor','none'); 
+    surf(NormAssmPowerCore, 'EdgeColor','none'); 
+    title('NormAssmPowerCore')
     colorbar
     pause(1);
 end
@@ -210,12 +221,6 @@ end
 
 disp("finish reading")
 
-%% Axial Location
-AxialLocation = zeros(zlayer,1); % top and down water/reflector are set as zero
-for i = 1:zlayer-8
-    AxialLocation(i+4) = i * 5.355;
-end
-
 %% Organizing data according to template
 % Assembly fission rate ==> AsmbPowerCoreLayer
 fprintf(wid, '%s\t\n', 'Assembly fission rate');
@@ -227,6 +232,7 @@ fprintf(wid, '\n%s\t','Axial location [cm]');
 for i = 1:tstep
     fprintf(wid, '%s\t%s\t%s\t','Row\Column', '1','2');
 end
+fprintf(wid,'\n');
 for z = zlayer:-1:1 
     for j = 1 : core-moderator
         fprintf(wid, '%f\t', AxialLocation(z));
@@ -262,6 +268,7 @@ for t = 1:tstep
         end
     end
 end
+
 disp("finish writing")
 %% CLOSE READ/WRITE FILE
 fclose(fid);
