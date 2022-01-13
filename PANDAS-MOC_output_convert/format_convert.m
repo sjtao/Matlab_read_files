@@ -79,8 +79,8 @@ if showplot
 end
 
 %% READ THE SECOND PART: The Normalized Pin Power Per Layer
-NormPinPowerLayer = zeros(zlayer, asmb*core, asmb*core);
-AsmbPowerCoreLayer = zeros(zlayer, core, core);
+NormPinPowerLayer = zeros(asmb*core, asmb*core, zlayer);
+AsmbPowerCoreLayer = zeros(core, core, zlayer);
 
 for z = 1:zlayer
     tline = fgetl(fid);
@@ -101,7 +101,7 @@ for z = 1:zlayer
                 disp(tline)
                 t = split(tline);
                 v = str2double(t(end-asmb+1:end));
-                NormPinPowerLayer(z, asmb*(i-1)+a, asmb*(j-1)+1 : asmb*j) = v';
+                NormPinPowerLayer(asmb*(i-1)+a, asmb*(j-1)+1 : asmb*j, z) = v';
                 a = a + 1;
                 tline = fgetl(fid);
             end
@@ -117,7 +117,7 @@ for z = 1:zlayer
         disp(tline)
         t = split(tline);
         v = str2double(t(end-core+1:end));
-        AsmbPowerCoreLayer(z, i, :) = v';
+        AsmbPowerCoreLayer(i, :, z) = v';
         tline = fgetl(fid);
     end
 end
@@ -131,7 +131,7 @@ if showplot
     set(h, 'EdgeColor','none', 'FaceColor','interp')
     title('NormPinPowerLayer')
     colorbar
-    alpha(.15)
+    alpha(.1)
     pause(1);
     
     figure(5)
@@ -142,7 +142,7 @@ if showplot
     h = slice(diff, 1:size(diff,2), 1:size(diff,1), 1:size(diff,3));
     set(h, 'EdgeColor','none', 'FaceColor','interp')
     title('AsmbPowerCoreLayer')
-    alpha(.15)
+    alpha(.1)
     colorbar
     pause(1);
 end
@@ -164,14 +164,14 @@ end
 if showplot
     figure(6)
     colormap jet
-    surf(NormAssmPowerCore, 'EdgeColor','none'); 
+    surface(NormAssmPowerCore, 'EdgeColor','none'); 
     title('NormAssmPowerCore')
     colorbar
     pause(1);
 end
 
 %% READ THE FOURTH PART: The Axial Power Distribution for Assembly
-AxialPowerAssm = zeros(zlayer, core*core);
+AxialPowerAssm = zeros(core*core, zlayer);
 
 while tline == "" || contains(tline, "*") == 1 || contains(tline, "Assembly") == 1
     disp(tline)
@@ -181,17 +181,15 @@ for i = zlayer:-1:1
     disp(tline)
     t = split(tline);
     v = str2double(t(end-core*core+1:end));
-    AxialPowerAssm(i, :) = v';
+    AxialPowerAssm(:, i) = v';
     tline = fgetl(fid);
 end
 if showplot
-    zlay =linspace(1,zlayer,zlayer);
     figure(7)
-    for i = 1 : core*core
-        subplot(3, 3, i)
-        plot(zlay, AxialPowerAssm(:,i),'r', 'LineWidth',1.2)
-        view(90,-90)
-    end
+    colormap jet
+    surface(AxialPowerAssm', 'EdgeColor','none');
+    title('AxialPowerAssm')
+    colorbar
     pause(1);
 end
 
@@ -239,7 +237,7 @@ for z = zlayer:-1:1
         for t = 1:tstep
             fprintf(wid, '%s\t', int2str(j));
             for i = 1 : core-moderator
-                fprintf(wid, '%f\t', AsmbPowerCoreLayer(z,j,i));
+                fprintf(wid, '%f\t', AsmbPowerCoreLayer(j,i,z));
             end
         end
         fprintf(wid,'\n');
@@ -262,7 +260,7 @@ for t = 1:tstep
         for j = 1 : (core-moderator)*asmb
             fprintf(wid, '%f\t%s\t', AxialLocation(z), int2str(j));
             for k = 1 : (core-moderator)*asmb
-                fprintf(wid, '%f\t', NormPinPowerLayer(z,j,k));
+                fprintf(wid, '%f\t', NormPinPowerLayer(j,k,z));
             end
             fprintf(wid,'\n');
         end
