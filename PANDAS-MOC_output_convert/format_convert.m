@@ -9,7 +9,7 @@ zlayer = 32;  %number of layers in z-axial
 tstep = 1;    %number of time steps printed in this file
 timestep = 0.25;
 
-showintermediate = 0; %plot results while reading
+showintermediate = 0; %plot results while reading, slow down the code
 showplot = 1;         %plot results after reading
 
 %% OPEN TXT FILE
