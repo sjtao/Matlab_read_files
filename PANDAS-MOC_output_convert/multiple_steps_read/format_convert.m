@@ -2,12 +2,12 @@ clear all
 close all
 %% TEST CASE
 TEST = 4;
-test4 = 1;
+test4 = 2;
 %% OPEN FOLDER
-path = cd('TD5\TD5-4');
+path = cd('TD4\TD4-5');
 cd 'power';
 
-datafile = 'TD5-4_p.dat'; % write to this file
+datafile = 'TD4-5_p.dat'; % write to this file
 wid = fopen(datafile,'w');
 if wid < 0 
     disp('failed to open the file to write');
@@ -22,18 +22,23 @@ pt = [0.00,0.25,0.50,0.75,1.00,1.25,1.50,1.75,2.00,2.25,2.50,2.70,3.00, ...
      4.00,5.00,6.00,7.00,8.00, 9.00, 10.00];
 elseif TEST == 4
 % --------------TD4--------------
-dt = [0, 4, 0.025; 4, 7, 0.05; 7, 8, 0.25; 8, 16, 1.0];
+dt = [0, 4, 0.025; 4, 7, 0.05; 7, 8, 0.25; 8, 16, 0.5];
 zlayer = 32;       %number of layers in z-axial
 if test4 == 1
 pt = [0,  0.25,  0.5,  0.75,  1,  1.25,  1.5,  1.75,  2,  2.25, ...
     2.5,  2.75,  3,  3.25,  3.5,  3.75,  4,  4.5,  5,  5.5,  6, ...
     7,  8,  9,  10,  11,  12,  13,  14,  15,  16];
+ft = [0.00,  0.50,  1.00,  1.50,  2.00,  2.50,  3.00,  3.50,  4.00, ...
+    5.00,  6.00,  7.00,  8.00,  9.00,  10.00,  11.00,  12.00,  13.00, ...
+    14.00,  15.00,  16.00];
 else
 pt = [0.00,  0.25,  0.50,  0.75,  1.00,  1.25,  1.50,  1.75,  2.00,  ...
 2.25,  2.50,  2.75,  3.00,  3.25,  3.50,  3.75,  4.00,  4.25,  ...
 4.50,  4.75,  5.00,  5.25,  5.50,  5.75,  6.00,  6.25,  6.50,  ...
 6.75,  7.00,  7.25,  7.50,  7.75,  8.00,  9.00,  10.00,  11.00, ...
 12.00,  13.00,  14.00,  15.00,  16.00];
+ft = [0,  0.5,  1,  1.5,  2,  2.5,  3,  3.5,  4,  4.5,  5,  5.5,...
+    6,  6.5,  7,  7.5,  8,  9,  10,  11,  12,  13,  14,  15,  16];
 end
 elseif TEST == 5
 % --------------TD5--------------
@@ -42,7 +47,9 @@ zlayer = 32;       %number of layers in z-axial
 pt = [0.00,  0.25,  0.50,  0.75,  1.00,  1.25,  1.50,  1.75,  2.00, ...
     2.25,  2.50,  2.75,  3.00,  3.25,  3.50,  3.75,  4.00,  4.25, 4.50, ...
     4.75,  5.00,  5.25,  5.50,  5.75,  6.00,  6.25,  6.50,  6.75,  7.00, ...
-    7.25,  7.50,  7.75,  8.00,  9.00,  10.00,  11.00,  12.00];
+    7.25,  7.50,  7.75,  8.00,  9.00,  10.00,  11.00,  12.00]; % assembly fission rate print time
+ft = [0.00, 0.50, 1.00, 1.50, 2.00, 2.50, 3.00, 3.50, 4.00, ...
+    4.50, 5.00, 6.00, 7.00, 8.00, 9.00, 10.00, 11.00, 12.00];
 end
 
 [m,~] = size(dt);
@@ -77,10 +84,10 @@ end
 AsmbPowerCoreLayer = zeros(core, core, zlayer, num_file);
 NormAssmPowerCore = zeros(core, core, num_file);
 
-print_t = 1;
+pt_t = 1;
+ft_t = 1;
 for f = 1 : num_file
-    if abs(time(f) - pt(print_t)) < 1.0e-6
-        print_t = print_t + 1;
+    if abs(time(f) - pt(pt_t)) < 1.0e-6
         filename = sprintf('Step (%d).out',f);
         fprintf('loading/printing file %s --> transient time %f sec\n', filename, time(f));
 
@@ -313,21 +320,21 @@ for f = 1 : num_file
         end
 
         %% Organizing data according to template
-        % pin fission rate ==> NormPinPowerLayer
-            if reducedtounity
-                NormPinPowerLayer = NormPinPowerLayer ./ sum(sum(sum(NormPinPowerLayer)));
-            end
-            fprintf(wid, '%s\t\n', 'PinFissionRate');
-            fprintf(wid, '\t%s\t%f','Time[s]', time(f));
-
-            fprintf(wid, '\n%s\t%s\t','Axiallocation[cm]', 'Row\Column');
-            for j = 1:core-moderator
-                for k = 1: asmb
-                    fprintf(wid, '%s\t', int2str((j-1)*asmb+k));
-                end
-            end
-            fprintf(wid, '\n');
+        % pin fission rate ==> NormPinPowerLayer          
             if TEST <= 3
+                if reducedtounity
+                    NormPinPowerLayer = NormPinPowerLayer ./ sum(sum(sum(NormPinPowerLayer)));
+                end
+                fprintf(wid, '%s\t\n', 'PinFissionRate');
+                fprintf(wid, '\t%s\t%f','Time[s]', time(f));
+
+                fprintf(wid, '\n%s\t%s\t','Axiallocation[cm]', 'Row\Column');
+                for j = 1:core-moderator
+                    for k = 1: asmb
+                        fprintf(wid, '%s\t', int2str((j-1)*asmb+k));
+                    end
+                end
+                fprintf(wid, '\n');
                 for z = zlayer:-1:1
                     for j = 1 : (core-moderator)*asmb
                         fprintf(wid, '%f\t%s\t', AxialLocation(z), int2str(j));
@@ -338,30 +345,44 @@ for f = 1 : num_file
                     end
                 end
             elseif TEST == 4 || TEST == 5
-                for z = zlayer-4:-1:5 
-                    for j = 1 : (core-moderator)*asmb
-                        fprintf(wid, '%f\t%s\t', AxialLocation(z), int2str(j));
-                        for k = 1 : (core-moderator)*asmb
-                            fprintf(wid, '%.6e\t', NormPinPowerLayer(j,k,z));
+                if abs(ft(ft_t) - pt(pt_t)) < 1.0e-6
+                    ft_t = ft_t + 1;
+                    if reducedtounity
+                        NormPinPowerLayer = NormPinPowerLayer ./ sum(sum(sum(NormPinPowerLayer)));
+                    end
+                    fprintf(wid, '\n%s\t\n', 'PinFissionRate');
+                    fprintf(wid, '\t%s\t%f','Time[s]', time(f)); 
+                    for z = zlayer-4:-1:5
+                        fprintf(wid, '\n%s\t%s\t','Axiallocation[cm]', 'Row\Column');
+                        for j = 1:core-moderator
+                            for k = 1: asmb
+                                fprintf(wid, '%s\t', int2str((j-1)*asmb+k));
+                            end
                         end
-                        fprintf(wid,'\n');
+                        for j = 1 : (core-moderator)*asmb
+                            fprintf(wid, '\n%f\t%s\t', AxialLocation(z), int2str(j));
+                            for k = 1 : (core-moderator)*asmb
+                                fprintf(wid, '%.6e\t', NormPinPowerLayer(j,k,z));
+                            end
+                        end      
                     end
                 end
             end
 
         %% CLOSE READ/WRITE FILE
+        pt_t = pt_t + 1;
         fclose(fid);
     end
 end
 
 % Assembly fission rate ==> AsmbPowerCoreLayer
-fprintf(wid, '%s\t\n', 'AssemblyFissionRate');
+fprintf(wid, '\n\n%s\t\n', 'AssemblyFissionRate');
 
 if TEST <= 3
-    print_t = 1;
+    pt_t = 1;
     for t = 1:num_file
-        if abs(time(t) - pt(print_t)) < 1.0e-6
-            print_t = print_t + 1;
+        if abs(time(t) - pt(pt_t)) < 1.0e-6
+            pt_t = pt_t + 1;
             fprintf(wid, '\n\t%s\t%f\t\t','Time[s]', time(t));
             if reducedtounity
                 AsmbPowerCoreLayer(:,:,:,t) = AsmbPowerCoreLayer(:,:,:,t) ./ sum(sum(sum(AsmbPowerCoreLayer(:,:,:,t))));
@@ -379,10 +400,10 @@ if TEST <= 3
         end
     end
 elseif TEST == 4 || TEST == 5
-    print_t = 1;
+    pt_t = 1;
     for t = 1:num_file
-        if abs(time(t) - pt(print_t)) < 1.0e-6
-            print_t = print_t + 1;
+        if abs(time(t) - pt(pt_t)) < 1.0e-6
+            pt_t = pt_t + 1;
             fprintf(wid, '\t%s\t%f\t','Time[s]', time(t));
             if reducedtounity
                 AsmbPowerCoreLayer(:,:,:,t) = AsmbPowerCoreLayer(:,:,:,t) ./ sum(sum(sum(AsmbPowerCoreLayer(:,:,:,t))));
@@ -390,10 +411,10 @@ elseif TEST == 4 || TEST == 5
         end
     end
     fprintf(wid, '\n%s\t','Axiallocation[cm]');
-    print_t = 1;
+    pt_t = 1;
     for t = 1:num_file
-        if abs(time(t) - pt(print_t)) < 1.0e-6
-            print_t = print_t + 1;
+        if abs(time(t) - pt(pt_t)) < 1.0e-6
+            pt_t = pt_t + 1;
             fprintf(wid, '%s\t%s\t%s\t','Row\Column', '1','2');
         end
     end
@@ -402,10 +423,10 @@ elseif TEST == 4 || TEST == 5
     for z = zlayer-4:-1:5 
         for j = 1 : core-moderator
             fprintf(wid, '%f\t', AxialLocation(z));
-            print_t = 1;
+            pt_t = 1;
             for t = 1:num_file
-                if abs(time(t) - pt(print_t)) < 1.0e-6
-                    print_t = print_t + 1;
+                if abs(time(t) - pt(pt_t)) < 1.0e-6
+                    pt_t = pt_t + 1;
                     fprintf(wid, '%s\t', int2str(j));
                     for i = 1 : core-moderator
                         fprintf(wid, '%.6e\t', AsmbPowerCoreLayer(j,i,z,t));
