@@ -1,17 +1,52 @@
 clear all
 close all
 %% TEST CASE
-TEST = 4;
-test4 = 2;
+NeedRename = 0;      %rename output to comparable
+reducedtounity = 1;  %scale data
+
+TEST = 0;
+test4 = 1;
+
+%% GEOMETRY PARAMETERS
+asmb = 17;        %assembly size
+core = 3;         %core size
+moderator = 1;    %surrounding moderator "core"
+
+showplot = 0;     %plot results after reading
+showplot2d = 0;
+showplot3d = 0;   %plot2d and plot3d cannot be 1 at the same time
+showline = 0;     %printing each line on screen
+
+
+
 %% OPEN FOLDER
-path = cd('TD4\TD4-5');
+path = cd('TD0\TD0-3');
+listing = dir('power');
+filename = extractfield(listing,'name');
+TS = table2array(readtable('TS_power.xlsx','sheet','TS'));
+
 cd 'power';
 
-datafile = 'TD4-5_p.dat'; % write to this file
+if NeedRename == 1 %% rename the output file
+    for i = 1 : size(filename,2)
+        name = char(filename(i));
+        tr1 = strcmp(name,'.');
+        tr2 = strcmp(name,'..');
+        if tr1 ~= 1 && tr2 ~= 1
+            oldname = sprintf('%s', name);
+            s = split(oldname, " ");
+            newname = sprintf('%s.out', s{3});
+            movefile(oldname, newname)
+        end
+    end
+end
+
+datafile = 'TD0-3_p.dat'; % write to this file
 wid = fopen(datafile,'w');
 if wid < 0 
     disp('failed to open the file to write');
 end
+
 
 %% time steps prepare
 if TEST <= 3
@@ -61,18 +96,24 @@ end
 [~, num_file] = size(time);
 disp(num_file)
 
-%% GEOMETRY PARAMETERS
-asmb = 17;        %assembly size
-core = 3;         %core size
-moderator = 1;    %surrounding moderator "core"
+%% Print Power, pcm, betaeff, lifetime
+TS_time = TS(:,2);
+TS_power = TS(:,3);
+TS_pcm = TS(:,4);
+TS_beta = TS(:,6);
+TS_life = TS(:,7);
+To_print_time = TS(:,8);
+walltime = TS(1,9);
 
-
-showplot = 0;     %plot results after reading
-showplot2d = 0;
-showplot3d = 0;   %plot2d and plot3d cannot be 1 at the same time
-showline = 0;     %printing each line on screen
-
-reducedtounity = 1;  %scale data
+fprintf(wid, "%s\t%f %s\n", "Wall-time", walltime/3600, "hr");
+fprintf(wid, "\n%s\t%s\t%s\t%s\t%s\t%s\n", "TransientTime[s]", "\rho[pcm]",	"kd", "P", "beff","\Gamma[s]");
+nt = 1;
+for i = 1 : num_file
+    if abs(TS_time(i) - To_print_time(nt))<1.0e-6
+        fprintf(wid, "%.3f\t%f\t\t%.6e\t%.6e\t%.6e\n", TS_time(i), TS_pcm(i), TS_power(i), TS_beta(i), TS_life(i));
+        nt = nt + 1;
+    end
+end
 
 %% Axial Location
 AxialLocation = zeros(zlayer,1); % top and down water/reflector 4 layers each
@@ -86,9 +127,10 @@ NormAssmPowerCore = zeros(core, core, num_file);
 
 pt_t = 1;
 ft_t = 1;
+scale = 1;
 for f = 1 : num_file
     if abs(time(f) - pt(pt_t)) < 1.0e-6
-        filename = sprintf('Step (%d).out',f);
+        filename = sprintf('%.5f.out', time(f));
         fprintf('loading/printing file %s --> transient time %f sec\n', filename, time(f));
 
         fid = fopen(filename,'r'); %change the txt file name if needed
@@ -324,6 +366,7 @@ for f = 1 : num_file
             if TEST <= 3
                 if reducedtounity
                     NormPinPowerLayer = NormPinPowerLayer ./ sum(sum(sum(NormPinPowerLayer)));
+                    NormPinPowerLayer = NormPinPowerLayer .* TS_power(f);
                 end
                 fprintf(wid, '%s\t\n', 'PinFissionRate');
                 fprintf(wid, '\t%s\t%f','Time[s]', time(f));
@@ -349,6 +392,7 @@ for f = 1 : num_file
                     ft_t = ft_t + 1;
                     if reducedtounity
                         NormPinPowerLayer = NormPinPowerLayer ./ sum(sum(sum(NormPinPowerLayer)));
+                        NormPinPowerLayer = NormPinPowerLayer .* TS_power(f);
                     end
                     fprintf(wid, '\n%s\t\n', 'PinFissionRate');
                     fprintf(wid, '\t%s\t%f','Time[s]', time(f)); 
@@ -380,12 +424,14 @@ fprintf(wid, '\n\n%s\t\n', 'AssemblyFissionRate');
 
 if TEST <= 3
     pt_t = 1;
+    scale = 1;
     for t = 1:num_file
         if abs(time(t) - pt(pt_t)) < 1.0e-6
             pt_t = pt_t + 1;
             fprintf(wid, '\n\t%s\t%f\t\t','Time[s]', time(t));
             if reducedtounity
                 AsmbPowerCoreLayer(:,:,:,t) = AsmbPowerCoreLayer(:,:,:,t) ./ sum(sum(sum(AsmbPowerCoreLayer(:,:,:,t))));
+                AsmbPowerCoreLayer(:,:,:,t) = AsmbPowerCoreLayer(:,:,:,t) .* TS_power(t);
             end
             for z = zlayer:-1:1
                 fprintf(wid, '\n\t%s\t%s\t%s\t','Row\Column', '1','2');
@@ -401,12 +447,14 @@ if TEST <= 3
     end
 elseif TEST == 4 || TEST == 5
     pt_t = 1;
+    scale = 1;
     for t = 1:num_file
         if abs(time(t) - pt(pt_t)) < 1.0e-6
             pt_t = pt_t + 1;
             fprintf(wid, '\t%s\t%f\t','Time[s]', time(t));
             if reducedtounity
                 AsmbPowerCoreLayer(:,:,:,t) = AsmbPowerCoreLayer(:,:,:,t) ./ sum(sum(sum(AsmbPowerCoreLayer(:,:,:,t))));
+                AsmbPowerCoreLayer(:,:,:,t) = AsmbPowerCoreLayer(:,:,:,t) .* TS_power(t);
             end
         end
     end
