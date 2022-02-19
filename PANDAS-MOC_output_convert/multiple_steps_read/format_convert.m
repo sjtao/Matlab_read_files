@@ -1,11 +1,30 @@
+% =====================================================
+% Coder: Shunjiang Tao
+% Date : Feb. 11, 2022
+% This script gathers all the TS results to reorgnize the
+% data and print the key steps that need to fill in the
+% OECD benchmark template. 
+% Cautions:
+% The asked time steps for the Power/Reactivity, Assembly 
+% fission rate and Pin fission rate could be different
+% Prerequisite:
+% Put all the TS power results in the 'power' folder
+% Since data are normalized in PANDAS before print out
+% the totalpower for each TS step should also be prepared
+% in an Excel file called 'TS_power.xlsx' so as to scale
+% data properly. 
+% The sheet will be used in the 'GatherDataFromCases.m' for
+% data gathering and comparison of subcases
+% =====================================================
+
 clear all
 close all
 %% TEST CASE
-NeedRename = 0;      %rename output to comparable
+NeedRename = 1;      %rename output to comparable
 reducedtounity = 1;  %scale data
 
-TEST = 0;
-test4 = 1;
+TEST = 4;
+test4 = 5;
 
 %% GEOMETRY PARAMETERS
 asmb = 17;        %assembly size
@@ -20,7 +39,7 @@ showline = 0;     %printing each line on screen
 
 
 %% OPEN FOLDER
-path = cd('TD0\TD0-3');
+path = cd('TD4\TD4-5');
 listing = dir('power');
 filename = extractfield(listing,'name');
 TS = table2array(readtable('TS_power.xlsx','sheet','TS'));
@@ -29,7 +48,7 @@ cd 'power';
 
 if NeedRename == 1 %% rename the output file
     for i = 1 : size(filename,2)
-        name = char(filename(i));
+        name = char(filename(i)); 
         tr1 = strcmp(name,'.');
         tr2 = strcmp(name,'..');
         if tr1 ~= 1 && tr2 ~= 1
@@ -39,9 +58,10 @@ if NeedRename == 1 %% rename the output file
             movefile(oldname, newname)
         end
     end
+    disp("Finish file rename");
 end
 
-datafile = 'TD0-3_p.dat'; % write to this file
+datafile = 'TD4-5 _p.dat'; % write to this file
 wid = fopen(datafile,'w');
 if wid < 0 
     disp('failed to open the file to write');
@@ -110,7 +130,7 @@ fprintf(wid, "\n%s\t%s\t%s\t%s\t%s\t%s\n", "TransientTime[s]", "\rho[pcm]",	"kd"
 nt = 1;
 for i = 1 : num_file
     if abs(TS_time(i) - To_print_time(nt))<1.0e-6
-        fprintf(wid, "%.3f\t%f\t\t%.6e\t%.6e\t%.6e\n", TS_time(i), TS_pcm(i), TS_power(i), TS_beta(i), TS_life(i));
+        fprintf(wid, "%.3f\t%.6e\t\t%.6e\t%.6e\t%.6e\n", TS_time(i), TS_pcm(i), TS_power(i), TS_beta(i), TS_life(i));
         nt = nt + 1;
     end
 end
